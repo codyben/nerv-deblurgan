@@ -18,7 +18,7 @@ import torch.utils.data
 import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-
+import PIL
 from model_nerv import CustomDataSet, Generator
 from utils import *
 
@@ -470,6 +470,7 @@ def evaluate(model, val_dataloader, pe, local_rank, args):
     msssim_list = []
     if args.dump_images:
         from torchvision.utils import save_image
+        from deblurgan.utils import load_images, deprocess_image, preprocess_image_7760
         visual_dir = f'{args.outf}/visualize'
         print(f'Saving predictions to {visual_dir}')
         if not os.path.isdir(visual_dir):
@@ -503,7 +504,21 @@ def evaluate(model, val_dataloader, pe, local_rank, args):
             for batch_ind in range(args.batchSize):
                 full_ind = i * args.batchSize + batch_ind
                 save_image(output_list[-1][batch_ind], f'{visual_dir}/pred_{full_ind}.png')
-                save_image(data[batch_ind], f'{visual_dir}/gt_{full_ind}.png')
+                p = output_list[-1][batch_ind]
+                # print(temp_img.shape)
+                temp_img = torch.permute(data[batch_ind], (1, 2, 0))
+                temp_img = temp_img.cpu().numpy()
+                print(temp_img.shape)
+                temp_img = PIL.Image.fromarray(
+                    (temp_img * 255.0).astype(np.uint8)).resize((256, 256))
+                temp_img = np.expand_dims(np.array(temp_img) / 255.0, axis=0)
+                print(temp_img.shape)
+                temp_img = torch.tensor(temp_img).cuda()
+                temp_img = torch.permute(temp_img, (0, 3, 1, 2))
+                save_image(temp_img, f'{visual_dir}/gt_{full_ind}.png')
+                combined = torch.cat((torch.squeeze(temp_img), p), 1)
+                print(combined.shape)
+                save_image(combined, f"sbs/compare_gen_{full_ind}.png")
 
         # compute psnr and ms-ssim
         target_list = [F.adaptive_avg_pool2d(data, x.shape[-2:]) for x in output_list]
