@@ -1,0 +1,2 @@
+PSNR for output (640, 1280) for quant quant_M8_E6: best_pred_seen_psnr: 35.61 | best_pred_seen_ssim: 0.9774 | best_pred_unseen_psnr: 0.0 | best_pred_unseen_ssim: 0.0 | best_quant_seen_psnr: 17.44 | best_quant_seen_ssim: 0.4638 | best_quant_unseen_psnr: 0.0 | best_quant_unseen_ssim: 0.0 | 
+
