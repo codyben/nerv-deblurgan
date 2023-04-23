@@ -505,7 +505,8 @@ def evaluate(model, val_dataloader, pe, local_rank, args):
                 full_ind = i * args.batchSize + batch_ind
                 save_image(output_list[-1][batch_ind], f'{visual_dir}/pred_{full_ind}.png')
                 p = output_list[-1][batch_ind]
-                # print(temp_img.shape)
+                temp_img = data[batch_ind]
+                print(temp_img.shape)
                 temp_img = torch.permute(data[batch_ind], (1, 2, 0))
                 temp_img = temp_img.cpu().numpy()
                 print(temp_img.shape)
@@ -517,7 +518,7 @@ def evaluate(model, val_dataloader, pe, local_rank, args):
                 temp_img = torch.permute(temp_img, (0, 3, 1, 2))
                 save_image(temp_img, f'{visual_dir}/gt_{full_ind}.png')
                 combined = torch.cat((torch.squeeze(temp_img), p), 1)
-                print(combined.shape)
+                # print(combined.shape)
                 save_image(combined, f"sbs/compare_gen_{full_ind}.png")
 
         # compute psnr and ms-ssim

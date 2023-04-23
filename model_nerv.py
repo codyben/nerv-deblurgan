@@ -127,6 +127,7 @@ class NeRVBlock(nn.Module):
             conv_type=kargs['conv_type'])
         self.norm = NormLayer(kargs['norm'], kargs['new_ngf'])
         self.act = ActivationLayer(kargs['act'])
+        # self.drop = nn.Dropout(p=0.1)
 
     def forward(self, x):
         return self.act(self.norm(self.conv(x)))
@@ -171,51 +172,59 @@ class Generator(nn.Module):
                 # head_layer = nn.Conv2d(ngf, 3, 3, 1, 1, bias=kargs['bias'])
             self.head_layers.append(head_layer)
         self.sigmoid =kargs['sigmoid']
-
     def forward(self, input):
-        import tensorflow as tf
-        from deblurgan.model import generator_model
-        from deblurgan.utils import load_images, deprocess_image, save_image, preprocess_image_7760
+        from torchvision import transforms
         output = self.stem(input)
         output = output.view(output.size(0), self.fc_dim, self.fc_h, self.fc_w)
-        import PIL
         out_list = []
-        # NEW CODE
-        # self.head_layers[-1] = "DBG"
-        l = len(self.head_layers)
-        for idx, (layer, head_layer) in enumerate(zip(self.layers, self.head_layers)):
+        for layer, head_layer in zip(self.layers, self.head_layers):
             output = layer(output) 
-            if head_layer and idx != l-1:
+            if head_layer is not None:
                 img_out = head_layer(output)
                 # normalize the final output iwth sigmoid or tanh function
                 img_out = torch.sigmoid(img_out) if self.sigmoid else (torch.tanh(img_out) + 1) * 0.5
-                # print(img_out.shape)
-                # out_list.append(img_out)
-            elif idx == l-1:
-                # print(output.shape)
-                g = generator_model()
-                g.load_weights('generator_3_1804.h5')
+                img_out = transforms.Resize((256, 256))(img_out)
+                out_list.append(img_out)
+        return out_list
+    # def forward(self, input):
+    #     import tensorflow as tf
+    #     from deblurgan.model import generator_model
+    #     from deblurgan.utils import load_images, deprocess_image, save_image, preprocess_image_7760
+    #     from torchvision import transforms
+    #     output = self.stem(input)
+    #     output = output.view(output.size(0), self.fc_dim, self.fc_h, self.fc_w)
+    #     import PIL
+    #     out_list = []
+    #     # NEW CODE
+    #     # self.head_layers[-1] = "DBG"
+    #     l = len(self.head_layers)
+    #     for idx, (layer, head_layer) in enumerate(zip(self.layers, self.head_layers)):
+    #         output = layer(output) 
+    #         if idx == l-1:
+    #             # print(output.shape)
+    #             g = generator_model()
+    #             g.load_weights('generator_3_1804.h5')
 
-                # output = nn.Conv2d(in_channels= 96 , out_channels= 3, kernel_size= 1 , stride= 1 , padding= 0, device='cuda' )(output)
-                img_out = head_layer(output)
-                output = torch.sigmoid(img_out) if self.sigmoid else (torch.tanh(img_out) + 1) * 0.5
-                output = torch.permute(output, (0, 2, 3, 1))
-                output_tf = np.array(tf.convert_to_tensor(output.cpu().numpy()))
-                # old_size = (output_tf.shape[2], output_tf.shape[1])
-                # PIL.Image.fromarray(np.squeeze(output_tf * 255.0).astype(np.uint8)).resize((256, 256)).save("testme.png")
-                output_tf = np.array(PIL.Image.fromarray(np.squeeze(output_tf * 255.0).astype(np.uint8)).resize((256, 256)))
-                output_tf = preprocess_image_7760(np.expand_dims(output_tf, axis=0))
-                generated_images = deprocess_image(g.predict(x=output_tf, batch_size=1)) / 255.0
-                # generated_images = np.array(PIL.Image.fromarray(np.squeeze(generated_images).astype(np.uint8)).resize(old_size)) / 255
-                # generated_images 
-                # generated_images = np.array(PIL.Image.fromarray(deprocess_image(np.squeeze(generated_images))).resize(old_size)) / 255.0
-                # generated_images = deprocess_image(generated_images).astype(np.uint8) / 255.0
-                # generated_images = np.expand_dims(generated_images, axis=0)
-                print(generated_images.shape)
-                generated_images = torch.tensor(generated_images)
-                generated_images = torch.permute(generated_images, (0, 3, 1, 2))
+    #             # output = nn.Conv2d(in_channels= 96 , out_channels= 3, kernel_size= 1 , stride= 1 , padding= 0, device='cuda' )(output)
+    #             img_out = head_layer(output)
+    #             output = torch.sigmoid(img_out) if self.sigmoid else (torch.tanh(img_out) + 1) * 0.5
+    #             output = transforms.Resize((256, 256))(output)
+    #             output = torch.permute(output, (0, 2, 3, 1))
+    #             output_tf = (tf.convert_to_tensor(output.cpu().detach().numpy() * 255.0))
+
+    #             # old_size = (output_tf.shape[2], output_tf.shape[1])
+    #             # PIL.Image.fromarray(np.squeeze(output_tf * 255.0).astype(np.uint8)).resize((256, 256)).save("testme.png")
+    #             output_tf = preprocess_image_7760(np.array(output_tf).astype(np.uint8))
+    #             generated_images = deprocess_image(g.predict(x=output_tf, batch_size=1)) / 255.0
+    #             # generated_images = np.array(PIL.Image.fromarray(np.squeeze(generated_images).astype(np.uint8)).resize(old_size)) / 255
+    #             # generated_images 
+    #             # generated_images = np.array(PIL.Image.fromarray(deprocess_image(np.squeeze(generated_images))).resize(old_size)) / 255.0
+    #             # generated_images = deprocess_image(generated_images).astype(np.uint8) / 255.0
+    #             # generated_images = np.expand_dims(generated_images, axis=0)
+    #             generated_images = torch.tensor(generated_images, dtype=torch.float32)
+    #             generated_images = torch.permute(generated_images, (0, 3, 1, 2))
                 
-                # generated_images = np.squeeze(np.asarray([deprocess_image(i) for i in generated_images]))
-                out_list.append(generated_images.cuda())
-        return  out_list
+    #             # generated_images = np.squeeze(np.asarray([deprocess_image(i) for i in generated_images]))
+    #             out_list.append(generated_images.cuda())
+    #     return  out_list
 

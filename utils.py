@@ -122,7 +122,6 @@ def psnr2(img1, img2):
 
 def loss_fn(pred, target, args):
     target = target.detach()
-
     if args.loss_type == 'L2':
         loss = F.mse_loss(pred, target, reduction='none')
         loss = loss.mean()       
